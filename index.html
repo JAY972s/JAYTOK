@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jaytok — TikTok Quality Bypass</title>
+  <meta name="description" content="Jaytok - Ghost Frame TikTok quality bypass, powered by the open-source tiktok-quality engine, 100% client-side, no uploads.">
+  <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%224%22 y=%224%22 width=%2276%22 height=%2276%22 rx=%2216%22 fill=%22%23facc15%22 stroke=%22%23000000%22 stroke-width=%226%22/><text x=%2242%22 y=%2260%22 font-family=%22'JetBrains Mono', monospace%22 font-weight=%22900%22 font-size=%2252%22 fill=%22%23000000%22 text-anchor=%22middle%22>J</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
+</head>
+<body>
+
+  <div class="page">
+
+  <div class="panel panel-header">
+    <div class="header">
+      <div class="header-title">Jay<span>tok</span></div>
+      <div class="header-subtitle">Ghost Frame Engine &middot; TikTok quality bypass, 100% client-side.</div>
+    </div>
+    <div class="tab-nav" id="tabNav">
+      <button class="tab-btn tab-btn-active" data-tab="optimizer">Optimizer</button>
+      <button class="tab-btn" data-tab="guide">Guide</button>
+    </div>
+  </div>
+
+  <div class="container" id="tabOptimizer">
+
+    <div class="panel panel-left">
+
+      <div class="control-box">
+        <div class="interpolator-box">
+          <div class="interpolator-header">
+            <span class="interpolator-title">GHOST FRAME ENGINE</span>
+            <span class="engine-card-tag">tiktok-quality</span>
+          </div>
+          <div class="engine-card-desc engine-desc-standalone">Appends ghost NALU frames pointing at a single 8-byte filler block, inflating the declared frame count so TikTok skips its recompression pass. H.264 MP4 only. Runs the original Python package in your browser via Pyodide — nothing is uploaded.</div>
+          <div class="ghost-options">
+            <div class="stat-item">
+              <span class="stat-label">FRAME MULTIPLIER</span>
+              <input type="number" class="stat-select" id="ghostMultiplier" value="10" min="2" max="30" step="1">
+            </div>
+          </div>
+          <div class="interpolator-info">
+            <div class="interpolator-note">
+              <i class="ri-cpu-fill"></i>
+              <span>First run downloads the Python runtime (~10MB, cached after). Processing itself is fast — a few seconds per video.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-right">
+      <div class="drop-zone" id="dropZone">
+        <div class="brutalist-upload-box">
+          <i class="ri-upload-2-fill"></i>
+        </div>
+        <div class="drop-text">
+          <div class="drop-text-primary">DROP VIDEOS HERE</div>
+          <div class="drop-text-secondary">OR <span>SELECT FILES</span> FROM COMPUTER &middot; MP4 (H.264)</div>
+        </div>
+      </div>
+
+      <div class="queue-and-actions-wrapper">
+        <div class="queue-container">
+          <div class="queue-header">
+            <span class="queue-title">PROCESSING QUEUE</span>
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+
+        <div class="control-actions">
+          <div class="btn-row">
+            <button class="btn btn-clear" id="clearBtn">Clear</button>
+            <button class="btn btn-patch" id="patchBtn" disabled>
+              <span>Patch Videos</span>
+            </button>
+          </div>
+          <a class="btn btn-tiktok" id="tiktokStudioBtn" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" rel="noopener noreferrer">
+            Upload to TikTok Studio
+          </a>
+          <div class="upload-note">
+            <i class="ri-information-fill"></i>
+            <span>Upload the patched video via TikTok Studio web to ensure the quality-preservation bypass works.</span>
+          </div>
+          <div class="progress-track" id="progressTrack">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="history-container">
+        <div class="history-header" id="historyHeader">
+          <div class="history-header-left">
+            <span class="history-title">HISTORY</span>
+            <span class="history-badge" id="historyBadge">0</span>
+          </div>
+          <button class="history-toggle-btn" id="historyToggleBtn">
+            <i class="ri-arrow-down-s-fill"></i>
+          </button>
+        </div>
+        <div class="history-drawer" id="historyDrawer">
+          <div class="history-list" id="historyList"></div>
+          <div class="history-actions">
+            <button class="btn-clear-history" id="clearHistoryBtn">Clear History</button>
+          </div>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" accept="video/mp4,.mp4" multiple>
+    </div>
+
+    <div class="panel panel-log">
+      <div class="log-header">
+        <span class="log-title">SYSTEM STATUS LOG</span>
+        <span class="log-copy-toast" id="copyLogToast">Copied</span>
+        <button class="log-copy-btn" id="copyLogBtn" title="Copy log">
+          <i class="ri-clipboard-fill"></i>
+        </button>
+      </div>
+      <div class="status-log" id="statusLog"></div>
+    </div>
+
+  </div>
+
+  <div class="container tab-panel hidden" id="tabGuide">
+    <div class="panel panel-left panel-guide">
+      <div class="control-box">
+        <div class="interpolator-box">
+          <div class="interpolator-header">
+            <span class="interpolator-title">HOW IT WORKS</span>
+          </div>
+          <div class="guide-block">
+            <h3>Ghost Frame Engine <span class="engine-card-tag">tiktok-quality</span></h3>
+            <p>Replicates the technique used by the "TikTok Enhancer" browser extension: appends thousands of tiny "ghost" frames that all point to a single shared 8-byte filler NAL unit, inflating the declared frame count (e.g. 10x) while adding only a few KB to the file. Also strips SEI metadata from the first frame and re-tags audio/video handlers. No pixel data is touched — zero re-encode, original quality preserved. H.264 MP4 only.</p>
+            <p>This engine runs the original, unmodified <code>tiktok_quality</code> Python package in your browser using <a href="https://pyodide.org" target="_blank" rel="noopener noreferrer">Pyodide</a> (CPython compiled to WebAssembly) — nothing is ever uploaded to a server.</p>
+          </div>
+          <div class="guide-block">
+            <h3>Privacy</h3>
+            <p>Everything happens locally in your browser tab. Processing history (including the patched video itself, for quick re-download) is stored only in your browser's IndexedDB, and can be cleared at any time from the History panel.</p>
+          </div>
+          <div class="guide-block">
+            <h3>Credits</h3>
+            <p>Built on <a href="https://github.com/BastienGimbert/tiktok-quality" target="_blank" rel="noopener noreferrer">tiktok-quality</a> by BastienGimbert. MIT licensed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="footer">
+    Built on <a href="https://github.com/BastienGimbert/tiktok-quality" target="_blank" rel="noopener noreferrer">tiktok-quality</a> &middot; open source, no uploads
+    <span id="changelogContainer"></span>
+  </div>
+
+  <div class="modal-overlay" id="tiktokModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <i class="ri-upload-2-fill"></i>
+          <span class="modal-title">UPLOAD TO TIKTOK STUDIO</span>
+        </div>
+        <button class="modal-close-btn" id="closeTiktokModalBtn">
+          <i class="ri-close-fill"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-warning-block">
+          <i class="ri-information-fill"></i>
+          <span>Enable Desktop Mode First</span>
+        </div>
+        <ul class="modal-warning-list">
+          <li>TikTok Studio upload only works in desktop mode browser.</li>
+          <li>On Chrome: tap the 3-dot menu → check "Desktop site".</li>
+          <li>On Safari: tap "AA" in the address bar → "Request Desktop Website".</li>
+          <li>On Samsung Browser: tap menu → "Desktop view".</li>
+          <li>After enabling, tap the button below to open TikTok Studio.</li>
+        </ul>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" id="cancelTiktokModalBtn">Cancel</button>
+        <a class="modal-btn modal-btn-confirm" id="confirmTiktokBtn" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" rel="noopener noreferrer">Open TikTok Studio</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
