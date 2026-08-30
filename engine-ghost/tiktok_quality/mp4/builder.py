@@ -72,9 +72,16 @@ def build_stsz(sample_sizes: List[int]) -> bytes:
 
 
 def build_stco(offsets: List[int]) -> bytes:
-    """Build stco box from list of chunk offsets."""
+    """Build stco box from list of chunk offsets (32-bit)."""
     body = b''.join(struct.pack('>I', o) for o in offsets)
     return build_box('stco', struct.pack('>II', 0, len(offsets)) + body)
+
+
+def build_co64(offsets: List[int]) -> bytes:
+    """Build co64 box from list of chunk offsets (64-bit, for very large files
+    or files that came in with co64 already, e.g. some QuickTime exports)."""
+    body = b''.join(struct.pack('>Q', o) for o in offsets)
+    return build_box('co64', struct.pack('>II', 0, len(offsets)) + body)
 
 
 def build_stsd_video(fixed_fields: bytes, codec_config: bytes, colr: bytes, pasp: bytes, btrt: bytes,

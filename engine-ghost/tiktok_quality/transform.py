@@ -5,13 +5,13 @@ import sys
 
 from .mp4.parser import (
     find_box, find_box_path, find_track_by_handler,
-    parse_stco, parse_stsz, parse_stsc, parse_stts, parse_nalu_list, parse_nalu_list_hevc,
+    parse_stco, parse_co64, parse_stsz, parse_stsc, parse_stts, parse_nalu_list, parse_nalu_list_hevc,
     read_u32,
 )
 from .mp4.builder import (
     build_box, build_ftyp, build_free, build_mvhd, build_mdhd,
     build_tkhd, build_hdlr, build_stts, build_stsc, build_stsz,
-    build_stco, build_stsd_video, build_avcc, build_hvcc, build_btrt, build_udta_comment,
+    build_stco, build_co64, build_stsd_video, build_avcc, build_hvcc, build_btrt, build_udta_comment,
 )
 
 # 8-byte filler NAL: length=4, type=0 (filler), empty payload
@@ -72,6 +72,10 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     sb_start, sb_end = stbl_pos + 8, stbl_pos + stbl_size
 
     stco_pos, _ = find_box(data, 'stco', sb_start, sb_end)
+    video_is_64bit = False
+    if stco_pos is None:
+        stco_pos, _ = find_box(data, 'co64', sb_start, sb_end)
+        video_is_64bit = True
     stsz_pos, _ = find_box(data, 'stsz', sb_start, sb_end)
     stsc_pos, _ = find_box(data, 'stsc', sb_start, sb_end)
     stts_pos, _ = find_box(data, 'stts', sb_start, sb_end)
@@ -92,8 +96,10 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         sys.exit(1)
     if verbose:
         print(f"[*] Codec: {'H.265/HEVC' if is_hevc else 'H.264/AVC'} ({sample_entry_type})")
+        if video_is_64bit:
+            print("[*] Video chunk offsets: 64-bit (co64)")
 
-    video_chunks = parse_stco(data, stco_pos)
+    video_chunks = parse_co64(data, stco_pos) if video_is_64bit else parse_stco(data, stco_pos)
     video_sizes = parse_stsz(data, stsz_pos)
     video_stsc = parse_stsc(data, stsc_pos)
     video_stts = parse_stts(data, stts_pos)
@@ -141,6 +147,10 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         a_sb_start, a_sb_end = a_stbl_pos + 8, a_stbl_pos + _
 
         a_stco_pos, _ = find_box(data, 'stco', a_sb_start, a_sb_end)
+        audio_is_64bit = False
+        if a_stco_pos is None:
+            a_stco_pos, _ = find_box(data, 'co64', a_sb_start, a_sb_end)
+            audio_is_64bit = True
         a_stsz_pos, a_stsz_size = find_box(data, 'stsz', a_sb_start, a_sb_end)
         a_stsc_pos, a_stsc_size = find_box(data, 'stsc', a_sb_start, a_sb_end)
         a_stts_pos, _ = find_box(data, 'stts', a_sb_start, a_sb_end)
@@ -148,7 +158,10 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         a_sgpd_pos, a_sgpd_size = find_box(data, 'sgpd', a_sb_start, a_sb_end)
         a_sbgp_pos, a_sbgp_size = find_box(data, 'sbgp', a_sb_start, a_sb_end)
 
-        audio_chunks = parse_stco(data, a_stco_pos)
+        if verbose and audio_is_64bit:
+            print("[*] Audio chunk offsets: 64-bit (co64)")
+
+        audio_chunks = parse_co64(data, a_stco_pos) if audio_is_64bit else parse_stco(data, a_stco_pos)
         audio_sizes = parse_stsz(data, a_stsz_pos)
         audio_stts = parse_stts(data, a_stts_pos)
 
@@ -254,10 +267,11 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     video_stsc_new = build_stsc(list(video_stsc) + [(len(video_chunks) + 1, 1, 1)])
     video_stsz_new = build_stsz([new_first_size] + video_sizes[1:] + [PADDING_SIZE] * pad_count)
 
-    # STCO placeholder
+    # STCO/CO64 placeholder — size must exactly match the final box we'll swap in below
     total_v_chunks = len(video_chunks) + pad_count
-    stco_ph_size = 16 + total_v_chunks * 4
-    v_stco_ph = struct.pack('>I', stco_ph_size) + b'stco' + b'\x00' * (stco_ph_size - 8)
+    v_offset_width = 8 if video_is_64bit else 4
+    stco_ph_size = 16 + total_v_chunks * v_offset_width
+    v_stco_ph = struct.pack('>I', stco_ph_size) + (b'co64' if video_is_64bit else b'stco') + b'\x00' * (stco_ph_size - 8)
 
     v_stbl_parts = [video_stsd_new, video_stts_new]
     if video_stss: v_stbl_parts.append(video_stss)
@@ -301,8 +315,9 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         audio_stsc = data[a_stsc_pos:a_stsc_pos + a_stsc_size]
         audio_stsz = data[a_stsz_pos:a_stsz_pos + a_stsz_size]
 
-        a_stco_ph_size = 16 + len(audio_chunks) * 4
-        a_stco_ph = struct.pack('>I', a_stco_ph_size) + b'stco' + b'\x00' * (a_stco_ph_size - 8)
+        a_offset_width = 8 if audio_is_64bit else 4
+        a_stco_ph_size = 16 + len(audio_chunks) * a_offset_width
+        a_stco_ph = struct.pack('>I', a_stco_ph_size) + (b'co64' if audio_is_64bit else b'stco') + b'\x00' * (a_stco_ph_size - 8)
 
         a_sgpd = data[a_sgpd_pos:a_sgpd_pos + a_sgpd_size] if a_sgpd_pos else b''
         a_sbgp = data[a_sbgp_pos:a_sbgp_pos + a_sbgp_size] if a_sbgp_pos else b''
@@ -339,15 +354,16 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
                                 else new_mdat_start + rel - sei_removed)
 
     # Rebuild with final STCOs
-    v_stbl_parts[-1] = build_stco(new_v_offsets)
+    v_stbl_parts[-1] = build_co64(new_v_offsets) if video_is_64bit else build_stco(new_v_offsets)
     video_stbl = build_box('stbl', b''.join(v_stbl_parts))
     video_minf = build_box('minf', video_vmhd + video_dinf + video_stbl)
     video_mdia = build_box('mdia', video_mdhd + video_hdlr + video_minf)
     video_trak = build_box('trak', video_tkhd + video_edts + video_mdia)
 
     if has_audio:
+        audio_stco_final = build_co64(new_a_offsets) if audio_is_64bit else build_stco(new_a_offsets)
         audio_stbl = build_box('stbl', audio_stsd + audio_stts_new + audio_stsc +
-                               audio_stsz + build_stco(new_a_offsets) + a_sgpd + a_sbgp)
+                               audio_stsz + audio_stco_final + a_sgpd + a_sbgp)
         audio_minf = build_box('minf', audio_smhd + audio_dinf + audio_stbl)
         audio_mdia = build_box('mdia', audio_mdhd + audio_hdlr + audio_minf)
         audio_trak = build_box('trak', audio_tkhd + audio_edts + audio_mdia)

@@ -8,6 +8,11 @@ def read_u32(data: bytes, offset: int) -> int:
     return struct.unpack('>I', data[offset:offset + 4])[0]
 
 
+def read_u64(data: bytes, offset: int) -> int:
+    """Read a big-endian unsigned 64-bit int (used by co64 chunk offsets)."""
+    return struct.unpack('>Q', data[offset:offset + 8])[0]
+
+
 def read_u16(data: bytes, offset: int) -> int:
     return struct.unpack('>H', data[offset:offset + 2])[0]
 
@@ -105,9 +110,16 @@ def parse_stsc(data: bytes, offset: int) -> List[Tuple[int, int, int]]:
 
 
 def parse_stco(data: bytes, offset: int) -> List[int]:
-    """Parse chunk offset box. Returns list of chunk offsets."""
+    """Parse chunk offset box (32-bit offsets). Returns list of chunk offsets."""
     entry_count = read_u32(data, offset + 12)
     return [read_u32(data, offset + 16 + i * 4) for i in range(entry_count)]
+
+
+def parse_co64(data: bytes, offset: int) -> List[int]:
+    """Parse chunk offset box (64-bit offsets, used for very large/QuickTime files).
+    Returns list of chunk offsets."""
+    entry_count = read_u32(data, offset + 12)
+    return [read_u64(data, offset + 16 + i * 8) for i in range(entry_count)]
 
 
 def parse_nalu_list(sample_data: bytes) -> List[Tuple[int, int, bytes]]:
