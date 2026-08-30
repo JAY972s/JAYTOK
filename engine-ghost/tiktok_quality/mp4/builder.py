@@ -77,19 +77,27 @@ def build_stco(offsets: List[int]) -> bytes:
     return build_box('stco', struct.pack('>II', 0, len(offsets)) + body)
 
 
-def build_stsd_video(fixed_fields: bytes, avcc: bytes, colr: bytes, pasp: bytes, btrt: bytes) -> bytes:
-    """Build video stsd box from sub-components."""
-    avc1_content = fixed_fields + avcc + colr + pasp + btrt
-    avc1 = struct.pack('>I', 8 + len(avc1_content)) + b'avc1' + avc1_content
-    return build_box('stsd', struct.pack('>II', 0, 1) + avc1)
+def build_stsd_video(fixed_fields: bytes, codec_config: bytes, colr: bytes, pasp: bytes, btrt: bytes,
+                      sample_entry_type: str = 'avc1') -> bytes:
+    """Build video stsd box from sub-components. sample_entry_type is 'avc1' for H.264
+    or 'hvc1'/'hev1' for H.265/HEVC (whichever the source used)."""
+    entry_content = fixed_fields + codec_config + colr + pasp + btrt
+    entry = struct.pack('>I', 8 + len(entry_content)) + sample_entry_type.encode('latin-1') + entry_content
+    return build_box('stsd', struct.pack('>II', 0, 1) + entry)
 
 
 def build_avcc(original_content: bytes, add_high_ext: bool = True) -> bytes:
-    """Build avcC box, optionally adding High profile extension."""
+    """Build avcC box (H.264 decoder configuration), optionally adding High profile extension."""
     content = original_content
     if add_high_ext:
         content += b'\xfd\xf8\xf8\x00'
     return build_box('avcC', content)
+
+
+def build_hvcc(original_content: bytes) -> bytes:
+    """Build hvcC box (H.265/HEVC decoder configuration). Passed through unchanged —
+    unlike avcC there's no equivalent 'High profile extension' quirk to patch."""
+    return build_box('hvcC', original_content)
 
 
 def build_btrt(buffer_size_db: int, max_bitrate: int, avg_bitrate: int) -> bytes:

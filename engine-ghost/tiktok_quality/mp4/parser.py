@@ -112,7 +112,7 @@ def parse_stco(data: bytes, offset: int) -> List[int]:
 
 def parse_nalu_list(sample_data: bytes) -> List[Tuple[int, int, bytes]]:
     """
-    Parse NALUs in an AVC sample (4-byte length-prefixed).
+    Parse NALUs in an AVC (H.264) sample (4-byte length-prefixed, 1-byte NAL header).
     Returns [(nalu_type, nalu_length, full_nalu_with_prefix), ...].
     """
     nalus = []
@@ -122,6 +122,24 @@ def parse_nalu_list(sample_data: bytes) -> List[Tuple[int, int, bytes]]:
         if pos + 4 + nalu_len > len(sample_data):
             break
         nalu_type = sample_data[pos + 4] & 0x1F
+        nalus.append((nalu_type, nalu_len, sample_data[pos:pos + 4 + nalu_len]))
+        pos += 4 + nalu_len
+    return nalus
+
+
+def parse_nalu_list_hevc(sample_data: bytes) -> List[Tuple[int, int, bytes]]:
+    """
+    Parse NALUs in an HEVC (H.265) sample (4-byte length-prefixed, 2-byte NAL header).
+    The NAL unit type sits in bits 1-6 of the first header byte (nal_unit_type).
+    Returns [(nalu_type, nalu_length, full_nalu_with_prefix), ...].
+    """
+    nalus = []
+    pos = 0
+    while pos + 4 <= len(sample_data):
+        nalu_len = read_u32(sample_data, pos)
+        if pos + 4 + nalu_len > len(sample_data):
+            break
+        nalu_type = (sample_data[pos + 4] >> 1) & 0x3F
         nalus.append((nalu_type, nalu_len, sample_data[pos:pos + 4 + nalu_len]))
         pos += 4 + nalu_len
     return nalus

@@ -5,21 +5,26 @@ import sys
 
 from .mp4.parser import (
     find_box, find_box_path, find_track_by_handler,
-    parse_stco, parse_stsz, parse_stsc, parse_stts, parse_nalu_list,
+    parse_stco, parse_stsz, parse_stsc, parse_stts, parse_nalu_list, parse_nalu_list_hevc,
     read_u32,
 )
 from .mp4.builder import (
     build_box, build_ftyp, build_free, build_mvhd, build_mdhd,
     build_tkhd, build_hdlr, build_stts, build_stsc, build_stsz,
-    build_stco, build_stsd_video, build_avcc, build_btrt, build_udta_comment,
+    build_stco, build_stsd_video, build_avcc, build_hvcc, build_btrt, build_udta_comment,
 )
 
 # 8-byte filler NAL: length=4, type=0 (filler), empty payload
 PADDING_NAL = b'\x00\x00\x00\x04\x00\x00\x00\x00'
 PADDING_SIZE = 8
 
-# NALU types to keep in first sample (strip SEI etc.)
+# NALU types to keep in first sample (strip SEI etc.) — H.264/AVC
 KEEP_NALU_TYPES = {1, 5}  # non-IDR slice, IDR slice
+
+# HEVC VCL NAL unit types are 0-31 (trailing/RADL/RASL/BLA/IDR/CRA slices);
+# non-VCL types (VPS/SPS/PPS/SEI/AUD, etc.) start at 32. Keeping anything
+# <= 31 keeps slice data and strips SEI/AUD the same way AVC's KEEP_NALU_TYPES does.
+HEVC_MAX_VCL_TYPE = 31
 
 # ISO 639-2/T packed 'und'
 LANG_UND = 0x55c4
@@ -75,6 +80,19 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     sdtp_pos, sdtp_size = find_box(data, 'sdtp', sb_start, sb_end)
     ctts_pos, ctts_size = find_box(data, 'ctts', sb_start, sb_end)
 
+    # Detect video codec from the stsd sample entry fourcc: 'avc1' = H.264,
+    # 'hvc1'/'hev1' = H.265/HEVC. Content starts with version+entry_count (8B)
+    # + entry size (4B) + entry fourcc (4B) = offset 12.
+    stsd_probe = data[stsd_pos + 8:stsd_pos + stsd_size]
+    sample_entry_type = stsd_probe[12:16].decode('latin-1')
+    is_hevc = sample_entry_type in ('hvc1', 'hev1')
+    if sample_entry_type not in ('avc1', 'hvc1', 'hev1'):
+        print(f"[!] ERROR: Unsupported video codec '{sample_entry_type}'. "
+              f"Only H.264 (avc1) and H.265/HEVC (hvc1/hev1) are supported.", file=sys.stderr)
+        sys.exit(1)
+    if verbose:
+        print(f"[*] Codec: {'H.265/HEVC' if is_hevc else 'H.264/AVC'} ({sample_entry_type})")
+
     video_chunks = parse_stco(data, stco_pos)
     video_sizes = parse_stsz(data, stsz_pos)
     video_stsc = parse_stsc(data, stsc_pos)
@@ -100,8 +118,12 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     first_size = video_sizes[0]
     first_sample = data[first_off:first_off + first_size]
 
-    nalus = parse_nalu_list(first_sample)
-    kept = [d for t, _, d in nalus if t in KEEP_NALU_TYPES]
+    if is_hevc:
+        nalus = parse_nalu_list_hevc(first_sample)
+        kept = [d for t, _, d in nalus if t <= HEVC_MAX_VCL_TYPE]
+    else:
+        nalus = parse_nalu_list(first_sample)
+        kept = [d for t, _, d in nalus if t in KEEP_NALU_TYPES]
     new_first = b''.join(kept) if kept else first_sample
     new_first_size = len(new_first)
     sei_removed = first_size - new_first_size
@@ -169,7 +191,7 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     new_mdat = struct.pack('>I', 8 + len(new_mdat_content)) + b'mdat' + new_mdat_content
 
     # Build new moov
-    ftyp = build_ftyp()
+    ftyp = build_ftyp(compatible='isomiso2hvc1mp41' if is_hevc else 'isomiso2avc1mp41')
     free = build_free()
 
     # MVHD
@@ -192,14 +214,16 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     dinf_pos, dinf_size = find_box_path(data, ['mdia', 'minf', 'dinf'], vt_start, vt_end)
     video_dinf = data[dinf_pos:dinf_pos + dinf_size]
 
-    # Video STSD (avcC + btrt patched)
+    # Video STSD (codec config + btrt patched) — works for both avcC (H.264) and hvcC (H.265)
     stsd_content = data[stsd_pos + 8:stsd_pos + stsd_size]
-    avc1_fixed = stsd_content[16:94]
+    video_fixed = stsd_content[16:94]
 
-    avcc_rel = stsd_content.find(b'avcC')
-    avcc_start = avcc_rel - 4
-    avcc_orig_size = read_u32(stsd_content, avcc_start)
-    avcc_new = build_avcc(stsd_content[avcc_start + 8:avcc_start + avcc_orig_size])
+    codec_box_name = b'hvcC' if is_hevc else b'avcC'
+    codec_rel = stsd_content.find(codec_box_name)
+    codec_start = codec_rel - 4
+    codec_orig_size = read_u32(stsd_content, codec_start)
+    codec_config_orig = stsd_content[codec_start + 8:codec_start + codec_orig_size]
+    codec_config_new = build_hvcc(codec_config_orig) if is_hevc else build_avcc(codec_config_orig)
 
     colr_box = b''
     colr_rel = stsd_content.find(b'colr')
@@ -219,7 +243,8 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     max_br = read_u32(stsd_content, btrt_rel + 8) if btrt_rel >= 0 else new_v_avg_br
     btrt_new = build_btrt(0, max_br, new_v_avg_br)
 
-    video_stsd_new = build_stsd_video(avc1_fixed, avcc_new, colr_box, pasp_box, btrt_new)
+    video_stsd_new = build_stsd_video(video_fixed, codec_config_new, colr_box, pasp_box, btrt_new,
+                                       sample_entry_type=sample_entry_type)
 
     # Video tables
     video_stts_new = build_stts([(orig_frames, time_delta), (pad_count, time_delta)])
