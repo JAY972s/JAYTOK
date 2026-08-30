@@ -37,7 +37,7 @@ if "/engine" not in sys.path:
     sys.path.insert(0, "/engine")
 `);
     // Import once so subsequent calls are fast.
-    pyodide.runPython("import tiktok_quality.transform as _tqt_probe");
+    pyodide.runPython("import tiktok_quality as _tqt_probe");
     logFn?.("Ghost Frame engine ready.", "success");
     return pyodide;
 }
@@ -80,7 +80,7 @@ export async function ghostFrameTransform(
     pyodide.globals.set("_comment", comment);
 
     const pyCode = `
-import tiktok_quality.transform as _tqt
+import tiktok_quality as _tqt
 _stats = None
 try:
     _stats = _tqt.transform(_in_path, _out_path, multiplier=int(_mult), comment=_comment, verbose=False)
