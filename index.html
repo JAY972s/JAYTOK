@@ -35,7 +35,7 @@
             <span class="interpolator-title">GHOST FRAME ENGINE</span>
             <span class="engine-card-tag">tiktok-quality</span>
           </div>
-          <div class="engine-card-desc engine-desc-standalone">Appends ghost NALU frames pointing at a single 8-byte filler block, inflating the declared frame count so TikTok skips its recompression pass. H.264 MP4 only. Runs the original Python package in your browser via Pyodide — nothing is uploaded.</div>
+          <div class="engine-card-desc engine-desc-standalone">Appends ghost NALU frames pointing at a single 8-byte filler block, inflating the declared frame count so TikTok skips its recompression pass. MP4/MOV, H.264 or H.265/HEVC. Runs the original Python package in your browser via Pyodide — nothing is uploaded.</div>
           <div class="ghost-options">
             <div class="stat-item">
               <span class="stat-label">FRAME MULTIPLIER</span>
@@ -59,7 +59,7 @@
         </div>
         <div class="drop-text">
           <div class="drop-text-primary">DROP VIDEOS HERE</div>
-          <div class="drop-text-secondary">OR <span>SELECT FILES</span> FROM COMPUTER &middot; MP4 (H.264)</div>
+          <div class="drop-text-secondary">OR <span>SELECT FILES</span> FROM COMPUTER &middot; MP4/MOV (H.264 or H.265)</div>
         </div>
       </div>
 
@@ -109,7 +109,7 @@
         </div>
       </div>
 
-      <input type="file" id="fileInput" accept="video/mp4,.mp4" multiple>
+      <input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mp4,.m4v,.mov" multiple>
     </div>
 
     <div class="panel panel-log">
@@ -134,7 +134,7 @@
           </div>
           <div class="guide-block">
             <h3>Ghost Frame Engine <span class="engine-card-tag">tiktok-quality</span></h3>
-            <p>Replicates the technique used by the "TikTok Enhancer" browser extension: appends thousands of tiny "ghost" frames that all point to a single shared 8-byte filler NAL unit, inflating the declared frame count (e.g. 10x) while adding only a few KB to the file. Also strips SEI metadata from the first frame and re-tags audio/video handlers. No pixel data is touched — zero re-encode, original quality preserved. H.264 MP4 only.</p>
+            <p>Replicates the technique used by the "TikTok Enhancer" browser extension: appends thousands of tiny "ghost" frames that all point to a single shared 8-byte filler NAL unit, inflating the declared frame count (e.g. 10x) while adding only a few KB to the file. Also strips SEI metadata from the first frame and re-tags audio/video handlers. No pixel data is touched — zero re-encode, original quality preserved. Works with MP4 and MOV, H.264 or H.265/HEVC.</p>
             <p>This engine runs the original, unmodified <code>tiktok_quality</code> Python package in your browser using <a href="https://pyodide.org" target="_blank" rel="noopener noreferrer">Pyodide</a> (CPython compiled to WebAssembly) — nothing is ever uploaded to a server.</p>
           </div>
           <div class="guide-block">

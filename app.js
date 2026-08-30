@@ -20,8 +20,8 @@ const DOWNLOAD_ANCHOR_CLEANUP_MS = 100;
 const SAFE_THUMBNAIL_PREFIX = "data:image/jpeg;base64,";
 const OUTPUT_SUFFIX = "_GhostFrame";
 
-const supportedMimeTypes = ["video/mp4"];
-const supportedExtensions = [".mp4"];
+const supportedMimeTypes = ["video/mp4", "video/quicktime", "video/x-m4v"];
+const supportedExtensions = [".mp4", ".m4v", ".mov"];
 
 const fileInput = document.getElementById("fileInput");
 const patchBtn = document.getElementById("patchBtn");
@@ -408,7 +408,7 @@ async function addFiles(fileList) {
         }
         if (skipped > 0) {
             logMessage(
-                `${skipped} file(s) skipped — Ghost Frame only supports MP4 (H.264).`,
+                `${skipped} file(s) skipped — Ghost Frame only supports MP4/MOV (H.264 or H.265/HEVC).`,
                 "warning",
             );
         }
