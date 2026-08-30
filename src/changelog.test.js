@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { changelogData } from "./changelog-data.mjs";
+import { changelogData } from "./changelog-data.js";
 import {
     getLatestVersion,
     hasNewVersion,
     initChangelog,
-} from "./changelog.mjs";
+} from "./changelog.js";
 
 let mockStorage = {};
 

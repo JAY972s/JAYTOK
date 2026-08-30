@@ -4,8 +4,8 @@ import {
     getAllRecords,
     saveRecord,
 } from "./db.js";
-import { initChangelog } from "./src/changelog.mjs";
-import { ghostFrameTransform } from "./engine-ghost/pyodide-bridge.mjs";
+import { initChangelog } from "./src/changelog.js";
+import { ghostFrameTransform } from "./engine-ghost/pyodide-bridge.js";
 
 const FRAME_CAPTURE_TIMEOUT_MS = 5000;
 const MAX_THUMBNAIL_DIMENSION = 120;

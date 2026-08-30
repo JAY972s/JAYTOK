@@ -1,4 +1,4 @@
-import { changelogData } from "./changelog-data.mjs";
+import { changelogData } from "./changelog-data.js";
 
 const STORAGE_KEY = "noblur-last-seen-version";
 

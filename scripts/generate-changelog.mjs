@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CHANGELOG_PATH = join(__dirname, "..", "CHANGELOG.md");
-const OUTPUT_PATH = join(__dirname, "..", "src", "changelog-data.mjs");
+const OUTPUT_PATH = join(__dirname, "..", "src", "changelog-data.js");
 
 function parseChangelog(markdown) {
     const versionBlocks = markdown.match(
