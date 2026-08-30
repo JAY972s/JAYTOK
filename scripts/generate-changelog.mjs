@@ -53,6 +53,12 @@ function main() {
             `Generated ${OUTPUT_PATH} with ${changelogData.length} version(s)`,
         );
     } catch (error) {
+        if (error.code === "ENOENT") {
+            console.warn(
+                `CHANGELOG.md not found — keeping existing ${OUTPUT_PATH} as-is.`,
+            );
+            return;
+        }
         console.error("Failed to generate changelog:", error.message);
         process.exit(1);
     }
