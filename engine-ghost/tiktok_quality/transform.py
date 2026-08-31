@@ -197,11 +197,13 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         old_a_br = total_a_bytes * 8 * a_timescale // old_a_ticks
         new_a_br = total_a_bytes * 8 * a_timescale // new_a_ticks
 
-    # Build new mdat
+    # New mdat parts (kept separate, written directly later to avoid
+    # materializing a full extra copy of the file in memory)
     mdat_before = data[mdat_data_start:first_off]
     mdat_after = data[first_off + first_size:mdat_pos + mdat_size]
-    new_mdat_content = mdat_before + new_first + mdat_after + PADDING_NAL
-    new_mdat = struct.pack('>I', 8 + len(new_mdat_content)) + b'mdat' + new_mdat_content
+    new_mdat_content_len = len(mdat_before) + len(new_first) + len(mdat_after) + len(PADDING_NAL)
+    mdat_header = struct.pack('>I', 8 + new_mdat_content_len) + b'mdat'
+    new_mdat_len = 8 + new_mdat_content_len
 
     # Build new moov
     ftyp = build_ftyp(compatible='isomiso2hvc1mp41' if is_hevc else 'isomiso2avc1mp41')
@@ -371,10 +373,18 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     moov = build_box('moov', mvhd + video_trak + audio_trak + udta)
     assert len(moov) == moov_size_final
 
-    # Write output
-    output = ftyp + free + moov + new_mdat
+    # Write output — pieces are written directly to disk instead of being
+    # concatenated into one giant in-memory buffer first, which is what was
+    # causing MemoryError on larger files.
     with open(output_path, 'wb') as f:
-        f.write(output)
+        f.write(ftyp)
+        f.write(free)
+        f.write(moov)
+        f.write(mdat_header)
+        f.write(mdat_before)
+        f.write(new_first)
+        f.write(mdat_after)
+        f.write(PADDING_NAL)
 
     stats = {
         'input_size': file_size,
