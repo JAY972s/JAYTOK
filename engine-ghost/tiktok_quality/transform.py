@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import struct
 import sys
 
@@ -386,10 +387,12 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
         f.write(mdat_after)
         f.write(PADDING_NAL)
 
+    output_size = os.path.getsize(output_path)
+
     stats = {
         'input_size': file_size,
-        'output_size': len(output),
-        'size_delta': len(output) - file_size,
+        'output_size': output_size,
+        'size_delta': output_size - file_size,
         'original_frames': orig_frames,
         'declared_frames': total_frames,
         'ghost_frames': pad_count,
@@ -397,7 +400,7 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     }
 
     if verbose:
-        print(f"[+] Output: {output_path} ({len(output):,} bytes)")
+        print(f"[+] Output: {output_path} ({output_size:,} bytes)")
         print(f"[+] Delta: {stats['size_delta']:+,} bytes")
         print(f"[+] Frames: {orig_frames} -> {total_frames} (x{multiplier})")
 
