@@ -21,7 +21,7 @@ async function loadEngine(logFn) {
     const pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
     logFn?.("Installing Ghost Frame engine (tiktok-quality)...", "info");
-    const base = new URL("./tiktok_quality/", import.meta.url);
+    const base = new URL("engine-ghost/tiktok_quality/", document.baseURI);
     pyodide.FS.mkdirTree("/engine/tiktok_quality/mp4");
     for (const [rel, dest] of ENGINE_FILES) {
         const res = await fetch(new URL(rel, base));
