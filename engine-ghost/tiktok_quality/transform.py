@@ -339,7 +339,7 @@ def transform(input_path: str, output_path: str, multiplier: int = 10,
     # Fill STCO offsets
     new_mdat_start = 32 + 8 + moov_size_final + 8
     first_video_rel = first_off - mdat_data_start
-    pad_abs = new_mdat_start + len(new_mdat_content) - PADDING_SIZE
+    pad_abs = new_mdat_start + new_mdat_content_len - PADDING_SIZE
 
     new_v_offsets = []
     for off in video_chunks:
